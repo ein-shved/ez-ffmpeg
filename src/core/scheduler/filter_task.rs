@@ -106,6 +106,8 @@ pub(crate) fn filter_graph_init(
 
     let mut ofps = Vec::with_capacity(output_len);
     for i in 0..output_len {
+
+                log::trace!("Init output filter!");
         let output_filter_parameter = OutputFilterParameter::new(
             filter_graph.outputs[i].media_type,
             filter_graph.outputs[i].opts.clone(),
@@ -130,7 +132,10 @@ pub(crate) fn filter_graph_init(
                 unreachable!()
             };
 
+                log::trace!("Filtergraph loop start!");
+
             loop {
+                // log::trace!("Filtergraph loop 0!");
                 // update scheduling to account for desired input stream, if it changed
                 //
                 // this check needs no locking because only the filtering thread
@@ -140,6 +145,7 @@ pub(crate) fn filter_graph_init(
                     input_controller.update_locked(&scheduler_status);
                 }
 
+                // log::trace!("Filtergraph loop 1!");
                 let result = src.recv_timeout(Duration::from_millis(100));
 
                 if wait_until_not_paused(&scheduler_status) == STATUS_END {
@@ -147,14 +153,17 @@ pub(crate) fn filter_graph_init(
                     break;
                 }
 
+                // log::trace!("Filtergraph loop 2!");
                 if let Err(e) = result {
                     if e == RecvTimeoutError::Disconnected {
                         debug!("Filtergraph all src is finished.");
                         break;
                     }
+                // log::trace!("Filtergraph loop 2.1 {e:?}!");
                     continue;
                 }
 
+                // log::trace!("Filtergraph loop 3!");
                 let frame_box = result.unwrap();
                 let input_index = frame_box.frame_data.fg_input_index;
 
@@ -166,6 +175,7 @@ pub(crate) fn filter_graph_init(
                     unreachable!()
                 }
 
+                // log::trace!("Filtergraph loop 4!");
                 unsafe {
                     if ifps[input_index].media_type == AVMEDIA_TYPE_SUBTITLE {
                         //TODO

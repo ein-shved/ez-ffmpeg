@@ -83,6 +83,7 @@ pub(crate) fn demux_init(
             let mut is_started = false;
             demux_paramter.wallclock_start = unsafe { av_gettime_relative() };
 
+        log::trace!("Demux loop start!");
             loop {
                 let mut send_flags = 0usize;
                 let mut packet = match packet_pool.get() {
@@ -93,6 +94,7 @@ pub(crate) fn demux_init(
                     }
                 };
 
+        log::trace!("Demux loop 0");
                 unsafe {
                     let mut ret = av_read_frame(in_fmt_ctx_box.fmt_ctx, packet.as_mut_ptr());
                     if ret == AVERROR(EAGAIN) {
@@ -104,12 +106,14 @@ pub(crate) fn demux_init(
                         av_usleep(10000);
                         continue;
                     }
+        log::trace!("Demux loop 1");
 
                     if wait_until_not_paused(&scheduler_status) == STATUS_END {
                         info!("Demuxer receiver end command, finishing.");
                         break;
                     }
 
+        log::trace!("Demux loop 2");
                     if ret < 0 {
                         if ret == AVERROR_EOF {
                             debug!("EOF while reading input");
@@ -126,6 +130,7 @@ pub(crate) fn demux_init(
                             ret = 0;
                         }
 
+        log::trace!("Demux loop 3");
                         if demux_paramter.stream_loop != 0 {
                             // Windows-specific CUDA handling logic
                             #[cfg(windows)]
@@ -168,6 +173,7 @@ pub(crate) fn demux_init(
                             /* fallthrough to the error path */
                         }
 
+        log::trace!("Demux loop 4");
                         if ret != 0 {
                             set_scheduler_error(
                                 &scheduler_status,
@@ -181,6 +187,7 @@ pub(crate) fn demux_init(
                         break;
                     }
 
+        log::trace!("Demux loop 5");
                     demux_paramter.end_pts = Timestamp {
                         ts: (*packet.as_ptr()).pts,
                         tb: (*packet.as_ptr()).time_base,
@@ -203,6 +210,7 @@ pub(crate) fn demux_init(
                         }
                     }
 
+        log::trace!("Demux loop 6");
                     if demux_paramter.demux_streams.len()
                         <= (*packet.as_ptr()).stream_index as usize
                     {
@@ -222,6 +230,7 @@ pub(crate) fn demux_init(
                         break;
                     }
 
+        log::trace!("Demux loop 7");
                     if let Some(readrate) = demux_paramter.readrate {
                         if readrate != 0.0 {
                             readrate_sleep(
@@ -232,6 +241,7 @@ pub(crate) fn demux_init(
                         }
                     }
 
+        log::trace!("Demux loop 8");
                     {
                         let ds = demux_paramter
                             .demux_streams
@@ -247,14 +257,17 @@ pub(crate) fn demux_init(
                                 codecpar: ds.codecpar,
                             },
                         };
+        log::trace!("Demux loop 8 - send");
                         ret = demux_send(&mut demux_paramter, packet_box, &packet_pool, send_flags, &demux_node, &scheduler_status, independent_readrate);
 
                         if ret < 0 {
                             break;
                         }
                     }
+        log::trace!("Demux loop 9");
                 }
             }
+        log::trace!("Demux loop done");
 
             if is_started {
                 demux_done(&mut demux_paramter, &packet_pool, &scheduler_status);
@@ -972,12 +985,14 @@ unsafe fn demux_send_for_stream(
 ) -> i32 {
     let stream_index = (*packet_box.packet.as_ptr()).stream_index;
 
+    log::trace!("Demux send for {stream_index}");
     let send_dsts = demux_paramter
         .dsts
         .iter()
         .enumerate()
         .filter(
-            |(_i, (_packet_dst, input_stream_index, _output_stream_index))| {
+            |(_i, (_packet_dst, input_stream_index, output_stream_index))| {
+                log::trace!("Has dst for {input_stream_index} -> {output_stream_index:?}");
                 *input_stream_index == stream_index as usize
             },
         )
@@ -1083,6 +1098,7 @@ unsafe fn demux_stream_send_to_dst(
         return AVERROR_EOF;
     }
 
+    log::trace!("Demux send for {output_stream_index:?} to {packet_dst:#?}");
     if let Err(_) = packet_dst.send(packet_box) {
         if !wait_until_not_paused(scheduler_status) == STATUS_END {
             error!("Demuxer send packet failed, destination already finished");
@@ -1091,6 +1107,7 @@ unsafe fn demux_stream_send_to_dst(
         *dst_finished = true;
         return AVERROR_EOF;
     }
+    log::trace!("Demux send for {output_stream_index:?} done");
 
     0
 }

@@ -112,6 +112,7 @@ pub(crate) fn dec_init(
     let exit_on_error = exit_on_error.unwrap_or(false);
 
     let dp_arc = dp_arc.clone();
+    let stream_index = dec_stream.stream_index;
     let result = std::thread::Builder::new()
         .name(format!(
             "decoder{}:{demux_idx}:{decoder_name}",
@@ -123,17 +124,20 @@ pub(crate) fn dec_init(
             let ret = 0;
             let mut err_exit = false;
 
+            log::trace!("Decoder loop start!");
             loop {
                 if input_status {
                     break;
                 }
 
+                log::trace!("Decoder loop 1 for {}", stream_index);
                 let result = receiver.recv_timeout(Duration::from_millis(100));
 
                 if wait_until_not_paused(&scheduler_status) == STATUS_END {
                     info!("Decoder receiver end command, finishing.");
                     break;
                 }
+                log::trace!("Decoder loop 2");
 
                 if let Err(e) = result {
                     if e == RecvTimeoutError::Disconnected {
@@ -143,6 +147,7 @@ pub(crate) fn dec_init(
                     }
                     continue;
                 }
+                log::trace!("Decoder loop 3");
 
                 let packet_box = result.unwrap();
 

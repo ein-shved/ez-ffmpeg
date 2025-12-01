@@ -212,10 +212,12 @@ impl Demuxer {
 
     pub(crate) fn connect_stream(&mut self, index: usize) {
         if self.streams[index].is_used() {
+            log::trace!("Stream {index} ({}) is used!", self.streams[index].stream_index);
             return;
         }
         let (sender, receiver) = crossbeam_channel::bounded(8);
         self.dsts.push((sender, index, None));
+        log::trace!("Connecting stream {index} ({}) src!", self.streams[index].stream_index);
         self.streams[index].set_src(receiver);
     }
 

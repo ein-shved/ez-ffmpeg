@@ -26,12 +26,16 @@ impl ThreadSynchronizer {
 
     pub(crate) fn thread_start(&self) {
         let mut counter = self.inner.counter.lock().unwrap();
+
+    log::trace!("Thread start!");
         *counter += 1;
     }
 
     pub(crate) fn thread_done(&self) {
         let mut counter = self.inner.counter.lock().unwrap();
         *counter -= 1;
+
+    log::trace!("Thread done!");
 
         if *counter == 0 {
             self.inner.condvar.notify_one();

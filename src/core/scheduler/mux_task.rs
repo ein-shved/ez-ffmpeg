@@ -90,8 +90,10 @@ pub(crate) fn ready_to_init_mux(
         let _ = std::thread::Builder::new()
             .name(format!("ready-to-init-muxer{mux_idx}"))
             .spawn(move || {
+                log::trace!("Spawning ready mux!");
                 let mut out_fmt_ctx_box = out_fmt_ctx_box;
                 loop {
+                log::trace!("Spawning ready mux 1!");
                     let result = receiver.recv_timeout(Duration::from_millis(100));
 
                     if wait_until_not_paused(&scheduler_status) == STATUS_END {
@@ -109,8 +111,10 @@ pub(crate) fn ready_to_init_mux(
                             error!("mux init thread exit");
                             break;
                         }
+                log::trace!("Spawning ready mux 1.1 {e}!");
                         continue;
                     }
+                log::trace!("Spawning ready mux 2!");
 
                     let stream_index = result.unwrap();
                     debug!("output_stream: {stream_index} is readied");
@@ -166,6 +170,8 @@ fn mux_task_start(
     thread_sync: ThreadSynchronizer,
     scheduler_result: Arc<Mutex<Option<crate::error::Result<()>>>>,
 ) -> crate::error::Result<()> {
+
+    error!("Mux start!");
     if queue.is_none() {
         return Ok(());
     }

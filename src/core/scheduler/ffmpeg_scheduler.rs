@@ -161,6 +161,7 @@ impl FfmpegScheduler<Initialization> {
             // Even if it's not ready here, it's going to be ready later, so it locks first
             thread_sync.thread_start();
             if mux.is_ready() {
+                log::trace!("Mux {mux_idx} ready!");
                 if let Err(e) = mux_init(
                     mux_idx,
                     mux,
@@ -174,6 +175,8 @@ impl FfmpegScheduler<Initialization> {
                     Self::cleanup(&scheduler_status, &self.ffmpeg_context);
                     return Err(e);
                 }
+            } else {
+                log::trace!("Mux {mux_idx} not ready!");
             }
         }
 
@@ -181,7 +184,10 @@ impl FfmpegScheduler<Initialization> {
         let ffmpeg_context = &mut self.ffmpeg_context;
         for (mux_idx, mux) in ffmpeg_context.muxs.iter_mut().enumerate() {
             if let Some(frame_pipelines) = mux.frame_pipelines.take() {
+
+                log::trace!("Mux has pipelines!");
                 for frame_pipeline in frame_pipelines {
+                    log::trace!("Mux iter pipelines!");
                     if let Err(e) = output_pipeline_init(
                         mux_idx,
                         frame_pipeline,
@@ -200,6 +206,7 @@ impl FfmpegScheduler<Initialization> {
         // Encoder
         let ffmpeg_context = &mut self.ffmpeg_context;
         for (mux_idx, mux) in &mut ffmpeg_context.muxs.iter_mut().enumerate() {
+            log::trace!("Ready to init mux {mux_idx}!");
             let ready_sender = ready_to_init_mux(
                 mux_idx,
                 mux,
@@ -211,6 +218,7 @@ impl FfmpegScheduler<Initialization> {
             );
 
             for enc_stream in mux.take_streams_mut() {
+                log::trace!("Mux enc stream {}!", enc_stream.stream_index);
                 if let Err(e) = enc_init(
                     mux_idx,
                     enc_stream,

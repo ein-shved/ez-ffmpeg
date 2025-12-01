@@ -553,6 +553,11 @@ fn map_manual(
         "Binding output with label '{}' to input stream {stream_index}:{demux_idx}",
         stream_map.linklabel
     );
+    log::trace!(
+        "Streams: {}, Ready: {}",
+        mux.stream_count(),
+        mux.nb_streams_ready.load(std::sync::atomic::Ordering::Acquire)
+    );
 
     let demux_node = demux.node.clone();
     let input_stream = demux.get_stream_mut(stream_index);
@@ -603,7 +608,7 @@ fn map_manual(
                     mux.stream_ready()
                 }
             } else {
-                if media_type == AVMEDIA_TYPE_VIDEO || media_type == AVMEDIA_TYPE_AUDIO {
+                if false && (media_type == AVMEDIA_TYPE_VIDEO || media_type == AVMEDIA_TYPE_AUDIO) {
                     init_simple_filtergraph(
                         demux,
                         stream_index,
@@ -1340,6 +1345,7 @@ fn init_simple_filtergraph(
 ) -> Result<()> {
     let codec_type = demux.get_stream(stream_index).codec_type;
 
+    log::trace!("Pushing filtergraph!");
     let filter_desc = if codec_type == AVMEDIA_TYPE_VIDEO {
         "null"
     } else {

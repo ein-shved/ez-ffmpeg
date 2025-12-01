@@ -85,6 +85,7 @@ impl DecoderStream {
         fg_input_index: usize,
         finished_flag_list: Arc<[AtomicBool]>,
     ) {
+        log::trace!("Dst fg added");
         self.dsts
             .push((frame_dst, fg_input_index, finished_flag_list));
     }
@@ -94,6 +95,7 @@ impl DecoderStream {
     }
 
     pub(crate) fn take_dsts(&mut self) -> Vec<(Sender<FrameBox>, usize, Arc<[AtomicBool]>)> {
+        log::trace!("Dsts taken from dec stream");
         std::mem::take(&mut self.dsts)
     }
 

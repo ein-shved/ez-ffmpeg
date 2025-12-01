@@ -150,6 +150,7 @@ pub(crate) fn enc_init(
     let result = std::thread::Builder::new()
         .name(format!("encoder{stream_index}:{mux_idx}:{encoder_name}"))
         .spawn(move || unsafe {
+            log::trace!("Encoder spawned!");
             let enc_ctx_box = enc_ctx_box;
             let stream_box = stream_box;
 
@@ -164,6 +165,9 @@ pub(crate) fn enc_init(
             let mut samples_queued = 0;
             let mut audio_frame_queue: VecDeque<FrameBox> = VecDeque::new();
             let mut is_finished = false;
+            // if let Some(ready_sender) = ready_sender.as_ref() {
+            //     let _ = ready_sender.send(stream_index as i32);
+            // }
 
             loop {
                 let sync_frame = receive_frame(
@@ -190,6 +194,7 @@ pub(crate) fn enc_init(
                     SyncFrame::Continue => continue,
                     SyncFrame::Break => break,
                 };
+                log::trace!("Got frame!");
 
                 let result = frame_encode(
                     enc_ctx_box.as_mut_ptr(),
@@ -372,7 +377,15 @@ fn receive_frame(
     let mut frame_box = if !*opened {
         let mut frame_box = match receive_from(receiver, scheduler_status) {
             Ok(frame) => frame,
-            Err(sync) => return sync,
+            Err(sync) => {
+                log::trace!("Sync only in enc");
+                if let Some(ready_sender) = ready_sender.as_ref() {
+                    unsafe {
+                    let _ = ready_sender.send((*stream).index);
+                    }
+                }
+                return sync;
+            }
         };
 
         if frame_is_null(&frame_box.frame) {
@@ -671,6 +684,7 @@ fn enc_open(
     unsafe {
         let enc = (*enc_ctx).codec;
 
+        log::trace!("Encoder openning!");
         let frame = frame_box.frame.as_mut_ptr();
         if (*enc_ctx).codec_type == AVMEDIA_TYPE_VIDEO
             || (*enc_ctx).codec_type == AVMEDIA_TYPE_AUDIO
